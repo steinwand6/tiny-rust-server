@@ -35,7 +35,22 @@ fn handle_connection(mut stream: TcpStream) {
     match stream.read(&mut buf) {
         Ok(_) => {
             println!("Request: {}", String::from_utf8_lossy(&buf[..]));
-            let response = format!("{res_header}{contents}");
+
+            let mut headers = [httparse::EMPTY_HEADER; 64];
+            let mut req = httparse::Request::new(&mut headers);
+            req.parse(&mut buf).unwrap();
+
+            let response;
+            match req.method {
+                Some("GET") => match req.path {
+                    Some("/") => {
+                        response = format!("{res_header}{contents}");
+                    }
+                    _ => response = "".to_string(),
+                },
+                _ => return,
+            }
+
             if let Err(e) = stream.write(response.as_bytes()) {
                 eprintln!("Error writing to stream: {e}");
             }
