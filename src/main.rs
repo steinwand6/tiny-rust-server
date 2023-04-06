@@ -20,9 +20,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn handle_connection(mut stream: TcpStream) {
     let mut buf = [0; 1024];
 
-    let contents = read_file("hello.htmlh").unwrap_or("<h1>error</h1>".to_string());
-
-    let res_header = "HTTP/1.1 200 OK\r\n\r\n";
     match stream.read(&mut buf) {
         Ok(_) => {
             println!("Request: {}", String::from_utf8_lossy(&buf[..]));
@@ -33,12 +30,7 @@ fn handle_connection(mut stream: TcpStream) {
 
             let response;
             match req.method {
-                Some("GET") => match req.path {
-                    Some("/") => {
-                        response = format!("{res_header}{contents}");
-                    }
-                    _ => response = "".to_string(),
-                },
+                Some("GET") => response = handle_get_request(&req),
                 _ => return,
             }
 
@@ -52,6 +44,37 @@ fn handle_connection(mut stream: TcpStream) {
         Err(e) => {
             eprintln!("Error reading from stream {e}");
         }
+    }
+}
+
+fn handle_get_request(req: &httparse::Request) -> String {
+    match req.path {
+        Some("/") => {
+            let file_name = "hello.html";
+            build_response(200, file_name)
+        }
+        _ => {
+            let file_name = "404.html";
+            build_response(404, file_name)
+        }
+    }
+}
+
+fn build_response(status_code: u16, file_name: &str) -> String {
+    let status_message = get_status_message_for_code(status_code);
+    let contents = read_file(file_name).unwrap_or_else(|e| {
+        eprintln!("Error with {file_name}: {e}");
+        return get_status_message_for_code(500);
+    });
+    format!("{status_message}\r\n\r\n{contents}")
+}
+
+fn get_status_message_for_code(status_code: u16) -> String {
+    match status_code {
+        200 => format!("HTTP/1.1 200 OK"),
+        404 => format!("HTTP/1.1 404 Not Found"),
+        500 => format!("HTTP/1.1 500 Internal ServerError"),
+        _ => unreachable!(),
     }
 }
 
