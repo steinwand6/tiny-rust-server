@@ -20,16 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn handle_connection(mut stream: TcpStream) {
     let mut buf = [0; 1024];
 
-    let file_name = "hello.html";
-
-    let mut contents = String::new();
-    if let Err(e) = File::open(file_name).and_then(|mut file| file.read_to_string(&mut contents)) {
-        eprintln!("Error with {file_name}: {e}");
-        contents = "
-			<head><title>Error!</title></head>
-			<body><h1>Error!</h1></body>"
-            .to_string();
-    }
+    let contents = read_file("hello.htmlh").unwrap_or("<h1>error</h1>".to_string());
 
     let res_header = "HTTP/1.1 200 OK\r\n\r\n";
     match stream.read(&mut buf) {
@@ -62,4 +53,11 @@ fn handle_connection(mut stream: TcpStream) {
             eprintln!("Error reading from stream {e}");
         }
     }
+}
+
+fn read_file(file_name: &str) -> Result<String, std::io::Error> {
+    let mut contents = String::new();
+
+    File::open(file_name).and_then(|mut file| file.read_to_string(&mut contents))?;
+    Ok(contents)
 }
