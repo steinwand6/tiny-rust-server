@@ -26,7 +26,12 @@ fn handle_connection(mut stream: TcpStream) {
 
             let mut headers = [httparse::EMPTY_HEADER; 64];
             let mut req = httparse::Request::new(&mut headers);
-            req.parse(&mut buf).unwrap();
+            if let Err(e) = req.parse(&mut buf) {
+                eprintln!("Error parsing request: {e}");
+                let response = build_response(400, "400.html");
+
+                return;
+            };
 
             let response;
             match req.method {
