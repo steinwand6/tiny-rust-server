@@ -34,12 +34,7 @@ fn handle_connection(mut stream: TcpStream) {
                 _ => return,
             }
 
-            if let Err(e) = stream.write(response.as_bytes()) {
-                eprintln!("Error writing to stream: {e}");
-            }
-            if let Err(e) = stream.flush() {
-                eprintln!("Error flush stream: {e}");
-            }
+            send_response(stream, response);
         }
         Err(e) => {
             eprintln!("Error reading from stream {e}");
@@ -67,6 +62,15 @@ fn build_response(status_code: u16, file_name: &str) -> String {
         return get_status_message_for_code(500);
     });
     format!("{status_message}\r\n\r\n{contents}")
+}
+
+fn send_response(mut stream: TcpStream, res: String) {
+    if let Err(e) = stream.write(res.as_bytes()) {
+        eprintln!("Error writing to stream: {e}");
+    }
+    if let Err(e) = stream.flush() {
+        eprintln!("Error flush stream: {e}");
+    }
 }
 
 fn get_status_message_for_code(status_code: u16) -> String {
