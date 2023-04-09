@@ -3,6 +3,7 @@ use std::{
     fs::File,
     io::{Read, Write},
     net::{TcpListener, TcpStream},
+    path::Path,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -22,13 +23,18 @@ fn handle_connection(mut stream: TcpStream) {
 
     match stream.read(&mut buf) {
         Ok(_) => {
-            println!("Request: {}", String::from_utf8_lossy(&buf[..]));
+            println!(
+                "Request: {:?}",
+                String::from_utf8_lossy(&buf[..])
+                    .split_once("\n")
+                    .map_or("", |(first_line, _)| first_line)
+            );
 
             let mut headers = [httparse::EMPTY_HEADER; 64];
             let mut req = httparse::Request::new(&mut headers);
             if let Err(e) = req.parse(&mut buf) {
                 eprintln!("Error parsing request: {e}");
-                let response = build_response(400, "static/errors/400.html");
+                let response = build_response(400, "private/errors/400.html");
                 send_response(stream, response);
                 return;
             };
@@ -48,16 +54,27 @@ fn handle_connection(mut stream: TcpStream) {
 }
 
 fn handle_get_request(req: &httparse::Request) -> String {
-    match req.path {
-        Some("/") => {
-            let file_name = "static/index.html";
-            build_response(200, file_name)
+    let mut path = match req.path {
+        Some(path) => path.to_string(),
+        None => {
+            eprintln!("Error parsing request");
+            return build_response(400, "private/errors/400.html");
         }
-        _ => {
-            let file_name = "static/errors/404.html";
-            build_response(404, file_name)
-        }
+    };
+
+    if path == "/" {
+        path = "static/index.html".to_string();
+    } else {
+        path = format!("static{path}");
     }
+
+    if !Path::new(&path).is_file() {
+        eprintln!("{} is not found", req.path.unwrap());
+        let file_name = "private/errors/404.html";
+        return build_response(404, file_name);
+    }
+
+    build_response(200, &path)
 }
 
 fn build_response(status_code: u16, file_name: &str) -> String {
@@ -81,6 +98,7 @@ fn send_response(mut stream: TcpStream, res: String) {
 fn get_status_message_for_code(status_code: u16) -> String {
     match status_code {
         200 => format!("HTTP/1.1 200 OK"),
+        400 => format!("HTTP/1.1 400 Bad Request"),
         404 => format!("HTTP/1.1 404 Not Found"),
         500 => format!("HTTP/1.1 500 Internal ServerError"),
         _ => unreachable!(),
