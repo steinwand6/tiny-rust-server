@@ -28,7 +28,7 @@ fn handle_connection(mut stream: TcpStream) {
             let mut req = httparse::Request::new(&mut headers);
             if let Err(e) = req.parse(&mut buf) {
                 eprintln!("Error parsing request: {e}");
-                let response = build_response(400, "400.html");
+                let response = build_response(400, "static/errors/400.html");
                 send_response(stream, response);
                 return;
             };
@@ -50,11 +50,11 @@ fn handle_connection(mut stream: TcpStream) {
 fn handle_get_request(req: &httparse::Request) -> String {
     match req.path {
         Some("/") => {
-            let file_name = "hello.html";
+            let file_name = "static/index.html";
             build_response(200, file_name)
         }
         _ => {
-            let file_name = "404.html";
+            let file_name = "static/errors/404.html";
             build_response(404, file_name)
         }
     }
