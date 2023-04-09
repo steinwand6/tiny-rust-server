@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         if let Ok(stream) = stream {
             handle_connection(stream);
         } else {
-            println!("Something is faild.");
+            eprintln!("Something is faild.");
         }
     }
     Ok(())
@@ -29,7 +29,7 @@ fn handle_connection(mut stream: TcpStream) {
             if let Err(e) = req.parse(&mut buf) {
                 eprintln!("Error parsing request: {e}");
                 let response = build_response(400, "400.html");
-
+                send_response(stream, response);
                 return;
             };
 
