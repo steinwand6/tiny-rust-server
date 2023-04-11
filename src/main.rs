@@ -6,6 +6,8 @@ use std::{
     path::Path,
 };
 
+use chrono::Utc;
+
 fn main() -> Result<(), Box<dyn Error>> {
     let listener = TcpListener::bind("127.0.0.1:7878")?;
     for stream in listener.incoming() {
@@ -80,8 +82,9 @@ fn handle_get_request(req: &httparse::Request) -> String {
 fn build_response(status_code: u16, file_name: &str) -> String {
     let status_message = get_status_message_for_code(status_code);
     let server = "Server: TinyRustServer/0.1";
+    let date = Utc::now().format("Date: %a, %d %b %Y %T GMT");
 
-    let header = format!("{status_message}\r\n{server}");
+    let header = format!("{status_message}\r\n{server}\r\n{date}");
     let contents = read_file(file_name).unwrap_or_else(|e| {
         eprintln!("Error with {file_name}: {e}");
         return get_status_message_for_code(500);
