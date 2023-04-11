@@ -79,11 +79,14 @@ fn handle_get_request(req: &httparse::Request) -> String {
 
 fn build_response(status_code: u16, file_name: &str) -> String {
     let status_message = get_status_message_for_code(status_code);
+    let server = "Server: TinyRustServer/0.1";
+
+    let header = format!("{status_message}\r\n{server}");
     let contents = read_file(file_name).unwrap_or_else(|e| {
         eprintln!("Error with {file_name}: {e}");
         return get_status_message_for_code(500);
     });
-    format!("{status_message}\r\n\r\n{contents}")
+    format!("{header}\r\n\r\n{contents}")
 }
 
 fn send_response(mut stream: TcpStream, res: String) {
